@@ -1,0 +1,184 @@
+---
+title: "Mia's Portfolio"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Page 1: Refined Graph 
+=======================================================================
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Notes 
+-A thing I learned is that you can make animated graphs in r-studio
+
+-Facetting can be very insightful if used correctly
+
+-I want to highlight that not every graph needs color to show the message
+
+### Chart A - Using Homes For Sale
+
+```{r}
+require(mosaic)
+require(Lock5Data)
+HomesForSale$State = factor(HomesForSale$State, level = c("CA", "NY", "NJ", "PA"))
+
+gf_boxplot(Price ~ State, data = HomesForSale, color = ~State) %>% gf_labs(title = "Slightly Higher and More Flexible Asking Price's in 2019", subtitle =  "In More Developed States", x = "", y = "Price in $1,000's") %>% gf_theme(theme_minimal())  %>% gf_theme(legend.position = "none") %>% gf_sina(Price ~ State, data = HomesForSale, alpha = 0.5, color = "gray")
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B - Using Hawks
+
+```{r}
+require(Stat2Data)
+data(Hawks)
+
+gf_point(Wing~Weight, data=Hawks, alpha = 0.4) %>% gf_theme(theme_minimal()) %>% gf_labs(title = "Slow Increase Between Wing Length With Increased Body Weight", y = "Wing Length (mm)", x = "Body Weight") 
+
+```
+
+### Chart C - Using Film
+
+```{r}
+require(mosaic)
+require(plotly)
+require(gapminder)
+require(Stat2Data)
+data(Film)
+#head(Film)
+
+graphName = gf_point(Rating~Time, data=Film, color=~Time_code, alpha = 0.6, text=~(paste("Cast:", Cast, "<br>Title:", Title))) %>% gf_labs(title="Movies that last longer tend to score higher in ratings", subtitle = "" , x = "Running time (in minutes)", y="Maltin rating") %>% gf_facet_wrap(~Good)
+
+ggplotly(graphName)
+
+```
+
+Page 2: Graphs with Time
+=======================================================================
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+### Chart A - Using Lincoln Weather
+
+```{r}
+require(ggridges)
+require(dplyr)
+require(lubridate)
+require(ggformula)
+require(viridis)
+require(tidyr)
+#head(lincoln_weather) #ymd(CST) 
+#names(lincoln_weather) 
+Newlincoln_weather = lincoln_weather %>% mutate(newDate = ymd(CST)) %>% rename(min_temp = "Min Temperature [F]", max_temp = "Max Temperature [F]") %>% mutate(avg_temp = (min_temp + max_temp)/2) %>% mutate(month = factor(Month, levels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")))
+
+gf_point(avg_temp ~ newDate, data = Newlincoln_weather, color = ~avg_temp) %>% gf_refine(scale_color_viridis_c(option = "turbo")) %>% gf_theme(legend.position = "none") %>% gf_facet_wrap(~month) %>% gf_labs( y = "Average temperature", x = " ", title = "Lincoln, Nebraska Follows East Coast Climates Throughout 2016", subtitle = "Like VA and NJ") +
+theme(axis.text.x = element_text(angle = 45, hjust = 1)) #got from chatgpt
+```
+
+
+
+### Chart B - Using Weather
+
+```{r}
+
+gf_tile(month ~ day, data = subset(Weather, year = 2016), fill = ~avg_temp) %>% gf_facet_grid(city ~.) %>% gf_refine(scale_fill_gradientn(colors = rev(rainbow(5))), scale_y_reverse(breaks = c(3,6,9))) %>% gf_labs(title = "Chicago & Bejing have Similar Weather Patterns")
+
+```
+
+
+Page 3: Maps
+=======================================================================
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+### Chart A - Using States (US based)
+
+```{r}
+require(mosaic)
+require(Lock5Data)
+require(ggplot2)
+require(tidyr)
+require(ggformula)
+require(maps)
+require(tibble)
+require(usdata)
+
+#head(CollegeScores)
+states = map_data("state") 
+#county = map_data("county") 
+#penn = map_data("county", "pennsylvania")
+#world = map_data("world")
+
+gf_polygon(lat~long, data=states, fill=NA, group =~group, color="black", size=0.07) %>% gf_labs(title = "With Closer Glance, the South Produces Lower ACT Scores") %>% gf_point(Latitude~Longitude, data=subset(CollegeScores, !(State %in% c("AK", "HI", "PR", "FM", "PW"))& !is.na(MidACT) & Latitude>20), color =~MidACT, alpha=0.5, group = NA) %>% gf_refine(coord_map()) %>% gf_theme(theme_map()) + scale_color_gradientn(colors = c("red", "yellow", "dark green"))
+```
+
+
+### Chart B - Using VA (non-US based)
+
+```{r}
+require(ggrepel)
+va = map_data("county","virginia")
+
+gf_polygon(lat~long, data = va, group = ~group, fill = NA, color = "black", size = 0.5) %>% gf_labs(title = "Virginia Colleges") %>% gf_point(Latitude~Longitude, data = subset(CollegeScores4yr, State == "VA"), group = NA, size=~NetPrice, alpha = 0.4) %>% gf_theme(theme_map())  + geom_text_repel(data=subset(CollegeScores4yr, State=="VA"), aes(x=Longitude, y=Latitude, label=Name, group=NA), max.overlaps = 10, size = 3 )
+
+```
+
+Page 4: Dashboard
+=======================================================================
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+### Chart A & B - Using Injuries 
+```{r}
+require(mosaic)
+library(readr)
+injuries <- read_csv("injuries.csv")
+#View(injuries)
+
+gf_bar(address.state~'statistics.days away/restricted/transfer', data = injuries) %>% gf_labs(y = "State")
+
+library(readr)
+require(janitor)
+injuries <- read_csv("injuries.csv")
+injuries= clean_names(injuries) %>% mutate(industry_division="Manufacturing")
+#head(injuries)
+gf_point(statistics_days_away~year, data=injuries, color=~industry_division, alpha=0.5) %>% gf_theme(theme_gray()) %>% gf_theme(legend.position="none") %>% gf_facet_wrap(~industry_division, nrow=3) %>% gf_labs(y = "Days away from work")
+```
+
+
+### Value box 1
+```{r}
+valueBox(2450, caption="Ch.A: California has by far the most injury dates taken ", color="ivory", icon = "fa-hospital")
+```
+
+
+### Value box 2
+```{r}
+valueBox(1, caption="Ch.A: South Carolina is the only state with only 1 injury day taken in 2003", color="grey", icon = "fa-stethoscope")
+```
+
+
+### Value Box 3
+```{r}
+valueBox(100, caption="Ch.B: 2007 Has the smallest average amount of days away due to injury", color="green", icon = "fa-skull")
+```
+
+
+
+
+
+
+
